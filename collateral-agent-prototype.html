@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>담보 배분 관계 조회 Prototype</title>
+  <style>
+    :root {
+      --ink: #17324d;
+      --navy: #0f3156;
+      --blue: #1d5fa7;
+      --paper: rgba(255, 255, 255, 0.94);
+      --line: rgba(17, 49, 86, 0.12);
+      --muted: #62778f;
+      --accent: #ef7d32;
+      --shadow: 0 24px 60px rgba(15, 49, 86, 0.12);
+      --senior-bg: #fff3e5;
+      --senior-line: #efb36f;
+      --target-bg: #eaf8ef;
+      --target-line: #7cc49b;
+      --click-bg: #edf4ff;
+      --click-line: #5f8fd8;
+      --repeat-bg: #fafcff;
+      --soft-blue: #f5f9ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 28%),
+        radial-gradient(circle at right bottom, rgba(62, 144, 217, 0.18), transparent 26%),
+        linear-gradient(135deg, #eef5fb, #dfeefe 45%, #edf6f4);
+    }
+
+    .page {
+      width: min(1480px, calc(100% - 32px));
+      margin: 28px auto 40px;
+    }
+
+    .hero {
+      padding: 34px;
+      border-radius: 34px;
+      background:
+        radial-gradient(circle at right top, rgba(255, 255, 255, 0.16), transparent 30%),
+        linear-gradient(135deg, #0f3156, #1d5fa7);
+      color: #fff;
+      box-shadow: 0 24px 58px rgba(12, 42, 76, 0.22);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: clamp(2rem, 4vw, 3.3rem);
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 920px;
+      color: rgba(255, 255, 255, 0.84);
+      line-height: 1.75;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .panel {
+      background: var(--paper);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(14px);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .form-panel,
+    .results {
+      padding: 24px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.24rem;
+      color: var(--navy);
+    }
+
+    .panel-copy {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 0.95rem;
+    }
+
+    .form-grid,
+    .results {
+      display: grid;
+      gap: 16px;
+    }
+
+    .field {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 250, 255, 0.96));
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+
+    input,
+    textarea,
+    button {
+      width: 100%;
+      font: inherit;
+    }
+
+    input,
+    textarea {
+      border: 1px solid rgba(18, 53, 91, 0.14);
+      border-radius: 14px;
+      padding: 13px 14px;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .helper {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .submit-btn {
+      border: 0;
+      border-radius: 18px;
+      padding: 16px 18px;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, #ef7d32, #f2a444);
+      cursor: pointer;
+      box-shadow: 0 16px 30px rgba(239, 125, 50, 0.24);
+    }
+
+    .status {
+      padding: 16px 18px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(18, 95, 167, 0.08), rgba(233, 246, 241, 0.9));
+      border: 1px solid rgba(29, 95, 167, 0.12);
+      color: var(--navy);
+      line-height: 1.6;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .summary-card,
+    .section-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--line);
+    }
+
+    .summary-card strong,
+    .meta-item strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .summary-card span {
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 1.02rem;
+      color: var(--navy);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toggle-btn {
+      width: auto;
+      border: 1px solid rgba(17, 49, 86, 0.12);
+      background: #fff;
+      color: var(--navy);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .toggle-btn.active.senior {
+      background: var(--senior-bg);
+      border-color: var(--senior-line);
+      color: #9a5600;
+    }
+
+    .toggle-btn.active.target {
+      background: var(--target-bg);
+      border-color: var(--target-line);
+      color: #206946;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .meta-item {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--soft-blue);
+      border: 1px solid rgba(17, 49, 86, 0.08);
+    }
+
+    .narrative {
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: #fbfdff;
+      border: 1px solid rgba(17, 49, 86, 0.08);
+      line-height: 1.8;
+      white-space: pre-line;
+    }
+
+    .evidence-ref {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      margin-left: 4px;
+      border-radius: 999px;
+      border: 1px solid rgba(29, 95, 167, 0.22);
+      background: #eef6ff;
+      color: var(--blue);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-decoration: none;
+      vertical-align: super;
+      cursor: pointer;
+    }
+
+    .evidence-ref:hover {
+      background: #dfeeff;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid rgba(17, 49, 86, 0.08);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1120px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(17, 49, 86, 0.08);
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.94rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f7fbff;
+      color: var(--navy);
+      font-size: 0.83rem;
+      letter-spacing: 0.02em;
+    }
+
+    tbody tr:hover {
+      background: rgba(29, 95, 167, 0.03);
+    }
+
+    tr.highlight-senior {
+      background: var(--senior-bg);
+      box-shadow: inset 4px 0 0 var(--senior-line);
+    }
+
+    tr.highlight-target {
+      background: var(--target-bg);
+      box-shadow: inset 4px 0 0 var(--target-line);
+    }
+
+    tr.highlight-click {
+      background: var(--click-bg);
+      box-shadow: inset 4px 0 0 var(--click-line);
+    }
+
+    .repeat-mtn,
+    .repeat-setting,
+    .repeat-claim {
+      color: transparent;
+      background: var(--repeat-bg);
+      user-select: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .badge.senior {
+      background: var(--senior-bg);
+      color: #9a5600;
+      border: 1px solid rgba(239, 179, 111, 0.6);
+    }
+
+    .badge.target {
+      background: var(--target-bg);
+      color: #206946;
+      border: 1px solid rgba(124, 196, 155, 0.65);
+    }
+
+    .badge.junior {
+      background: #f1f5fb;
+      color: #5a7088;
+      border: 1px solid rgba(90, 112, 136, 0.18);
+    }
+
+    .empty {
+      padding: 26px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .caption {
+      margin: -4px 0 12px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid,
+      .meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 20px, 100%);
+        margin-top: 16px;
+      }
+
+      .hero,
+      .form-panel,
+      .results {
+        padding: 20px;
+        border-radius: 22px;
+      }
+
+      .summary-grid,
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="eyebrow">Collateral Allocation Agent Prototype</div>
+      <h1>계좌번호 기준 선순위 채권 관계와 담보 배분 결과 조회</h1>
+      <p>
+        내부계약번호를 입력하면 실제 DB를 조회해 연결된 설정, 담보, 선순위 피담보채권 배분 구조를 보여줍니다.
+        순신용이 발생한 경우에는 계산 결과를 바탕으로 발생 원인을 자연어로 함께 정리합니다.
+      </p>
+    </section>
+
+    <div class="layout">
+      <aside class="panel form-panel">
+        <h2 class="panel-title">조회 조건</h2>
+        <p class="panel-copy">
+          현재 프로토타입은 내부계약번호(ICN) 기준으로 실시간 DB 조회를 수행합니다.
+        </p>
+
+        <form id="analyzeForm" class="form-grid">
+          <div class="field">
+            <label for="identifierValue">내부계약번호</label>
+            <input id="identifierValue" name="identifierValue" placeholder="예: 100000020202020" value="100000020202020" required>
+            <div class="helper">숫자형 내부계약번호만 조회 가능합니다.</div>
+          </div>
+
+          <div class="field">
+            <label for="question">분석 요청 메모</label>
+            <textarea id="question" name="question" placeholder="예: 선순위 관계와 순신용 발생 원인 조회">선순위 관계와 순신용 발생 원인 조회</textarea>
+            <div class="helper">자연어 해석은 단순 보조용이며, 배분 계산은 DB와 규칙 엔진 결과를 그대로 사용합니다.</div>
+          </div>
+
+          <button class="submit-btn" type="submit">실제 DB 조회 실행</button>
+        </form>
+      </aside>
+
+      <main class="panel results">
+        <div id="statusBox" class="status">조회할 계좌번호를 입력한 뒤 실제 DB 조회를 실행하세요.</div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <strong>조회 대상 계좌번호</strong>
+            <span id="identifierEcho">-</span>
+          </div>
+          <div class="summary-card">
+            <strong>선순위 채권 배분 합계</strong>
+            <span id="seniorTotal">-</span>
+          </div>
+          <div class="summary-card">
+            <strong>대상 계좌 배분액</strong>
+            <span id="targetAllocated">-</span>
+          </div>
+          <div class="summary-card">
+            <strong>순신용 발생액</strong>
+            <span id="targetShortfall">-</span>
+          </div>
+        </div>
+
+        <section class="section-card">
+          <div class="section-head">
+            <h2>분석 메타 정보</h2>
+          </div>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <strong>분석 의도</strong>
+              <span id="intentValue">-</span>
+            </div>
+            <div class="meta-item">
+              <strong>분석 포커스</strong>
+              <span id="focusValue">-</span>
+            </div>
+            <div class="meta-item">
+              <strong>응답 구조</strong>
+              <span id="formatValue">-</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-head">
+            <h2>순신용 발생 원인</h2>
+          </div>
+          <div id="reasonSummary" class="narrative">조회 결과를 바탕으로 순신용 발생 원인을 여기에 표시합니다.</div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-head">
+            <h2>설정 및 담보 배분표</h2>
+            <div class="toolbar">
+              <button id="highlightSeniorBtn" class="toggle-btn senior" type="button">선순위 강조</button>
+              <button id="highlightTargetBtn" class="toggle-btn target" type="button">대상채권 강조</button>
+              <button id="clearHighlightBtn" class="toggle-btn" type="button">강조 해제</button>
+            </div>
+          </div>
+          <p class="caption">
+            같은 담보번호와 같은 설정번호는 셀 병합처럼 보이도록 정리했으며, 배정 후 담보 잔여액은 각 계좌 배정이 반영된 직후 금액입니다.
+          </p>
+          <div id="settingTableWrap" class="table-wrap">
+            <div class="empty">조회 결과가 없습니다.</div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-head">
+            <h2>피담보채권 배분표</h2>
+          </div>
+          <p class="caption">
+            계좌 행을 클릭하면 해당 계좌가 실제로 배분받은 설정과 담보 행만 위 표에서 강조합니다.
+          </p>
+          <div id="claimTableWrap" class="table-wrap">
+            <div class="empty">조회 결과가 없습니다.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "http://127.0.0.1:8000/api/allocation-tree";
+
+    const analyzeForm = document.getElementById("analyzeForm");
+    const statusBox = document.getElementById("statusBox");
+    const intentValue = document.getElementById("intentValue");
+    const focusValue = document.getElementById("focusValue");
+    const formatValue = document.getElementById("formatValue");
+    const identifierEcho = document.getElementById("identifierEcho");
+    const seniorTotal = document.getElementById("seniorTotal");
+    const targetAllocated = document.getElementById("targetAllocated");
+    const targetShortfall = document.getElementById("targetShortfall");
+    const reasonSummary = document.getElementById("reasonSummary");
+    const settingTableWrap = document.getElementById("settingTableWrap");
+    const claimTableWrap = document.getElementById("claimTableWrap");
+    const highlightSeniorBtn = document.getElementById("highlightSeniorBtn");
+    const highlightTargetBtn = document.getElementById("highlightTargetBtn");
+    const clearHighlightBtn = document.getElementById("clearHighlightBtn");
+
+    let currentHighlightMode = "none";
+
+    function formatMoney(amount) {
+      if (amount === null || amount === undefined || Number.isNaN(Number(amount))) return "-";
+      const inThousand = Math.round(Number(amount) / 1000);
+      return `${inThousand.toLocaleString("ko-KR")}천원`;
+    }
+
+    function formatDate(dateValue) {
+      const value = String(dateValue || "");
+      if (value.length !== 8) return value || "-";
+      return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+    }
+
+    function roleRank(role) {
+      if (role === "senior") return 0;
+      if (role === "target") return 1;
+      return 2;
+    }
+
+    function roleLabel(role) {
+      if (role === "senior") return "선순위";
+      if (role === "target") return "대상채권";
+      return "후순위";
+    }
+
+    function roleBadge(role) {
+      return `<span class="badge ${role}">${roleLabel(role)}</span>`;
+    }
+
+    function setActiveButton(mode) {
+      highlightSeniorBtn.classList.toggle("active", mode === "senior");
+      highlightSeniorBtn.classList.toggle("senior", true);
+      highlightTargetBtn.classList.toggle("active", mode === "target");
+      highlightTargetBtn.classList.toggle("target", true);
+      clearHighlightBtn.classList.toggle("active", mode === "none");
+    }
+
+    function clearRowHighlights() {
+      document.querySelectorAll("tbody tr").forEach((row) => {
+        row.classList.remove("highlight-senior", "highlight-target", "highlight-click");
+      });
+    }
+
+    function applyHighlight(mode) {
+      currentHighlightMode = mode;
+      clearRowHighlights();
+      setActiveButton(mode);
+
+      if (mode === "none") return;
+
+      const className = mode === "senior" ? "highlight-senior" : "highlight-target";
+      document.querySelectorAll(`tbody tr[data-highlight-role="${mode}"]`).forEach((row) => {
+        row.classList.add(className);
+      });
+    }
+
+    function highlightClaimFlow(icn) {
+      clearRowHighlights();
+      setActiveButton("none");
+
+      const claimRows = document.querySelectorAll(`tbody tr[data-claim-icn="${icn}"]`);
+      claimRows.forEach((row) => {
+        row.classList.add("highlight-click");
+      });
+
+      document.querySelectorAll(`tbody tr[data-linked-icns]`).forEach((row) => {
+        const linked = (row.dataset.linkedIcns || "").split(",").map((item) => item.trim()).filter(Boolean);
+        if (linked.includes(String(icn))) {
+          row.classList.add("highlight-click");
+        }
+      });
+
+      const firstRow = claimRows[0] || document.querySelector(`tbody tr[data-linked-icns*="${icn}"]`);
+      if (firstRow) {
+        firstRow.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+
+    function evidenceRef(no, icn) {
+      return `<a href="#" class="evidence-ref" data-evidence-icn="${icn}" title="해당 계좌 배분 내역 보기">${no}</a>`;
+    }
+
+    function buildReasonSummary(tree, targetIcn) {
+      const allClaims = tree.trees.flatMap((settingTree) => settingTree.claims || []);
+      const targetClaims = allClaims.filter((claim) => String(claim.icn) === String(targetIcn));
+      const seniorClaims = allClaims.filter((claim) => claim.role === "senior");
+      const shortfall = Number(tree.target_summary?.total_target_shortfall || 0);
+      const allocated = Number(tree.target_summary?.total_target_allocated || 0);
+      const seniorAllocated = Number(tree.target_summary?.total_senior_allocated || 0);
+      let evidenceNo = 1;
+
+      if (!targetClaims.length) {
+        return "입력한 계좌번호가 현재 조회 범위에서 확인되지 않았습니다.";
+      }
+
+      const totalArrAmt = targetClaims.reduce((sum, claim) => sum + Number(claim.arr_amt || 0), 0);
+      const targetAllocations = targetClaims.flatMap((claim) => claim.collateral_allocations || []);
+      const targetAllocationText = targetAllocations.length
+        ? targetAllocations
+            .map((item) => `${item.mtn} 담보에서 ${formatMoney(item.allocated_amount)}`)
+            .join(", ")
+        : "실제 배분된 담보가 없습니다.";
+
+      const seniorClaimText = seniorClaims.length
+        ? seniorClaims
+            .map((claim) => {
+              const ref = evidenceRef(evidenceNo, claim.icn);
+              evidenceNo += 1;
+              return `${claim.icn} 계좌가 ${formatMoney(claim.allocated_amount)}${ref}`;
+            })
+            .join(", ")
+        : "선순위 채권은 확인되지 않았습니다.";
+
+      const targetClaimText = targetClaims
+        .map((claim) => {
+          const ref = evidenceRef(evidenceNo, claim.icn);
+          evidenceNo += 1;
+          return `${claim.icn} 계좌가 ${formatMoney(claim.allocated_amount)}${ref}`;
+        })
+        .join(", ");
+
+      if (shortfall <= 0) {
+        return [
+          `${targetIcn} 계좌는 순신용이 발생하지 않았습니다.`,
+          `계약금액 ${formatMoney(totalArrAmt)} 중 ${formatMoney(allocated)}이 담보로 전액 충당되었습니다.`,
+          `실제 배분 경로는 ${targetAllocationText} 입니다.`
+        ].join("<br>");
+      }
+
+      return [
+        `${targetIcn} 계좌는 계약금액 ${formatMoney(totalArrAmt)} 중 ${formatMoney(allocated)}만 담보 배분을 받아 ${formatMoney(shortfall)}의 순신용이 발생했습니다.`,
+        `선순위 배분 내역은 ${seniorClaimText} 입니다.`,
+        `대상 계좌 배분 내역은 ${targetClaimText} 이며, 실제 담보 배분 경로는 ${targetAllocationText} 입니다.`,
+        `즉 선행 설정과 선순위 채권이 먼저 담보 여력을 사용한 뒤 남은 금액만 대상 계좌에 배분되어 전액 담보처리가 되지 않았습니다.`
+      ].join("<br>");
+    }
+
+    function buildSettingRows(trees) {
+      const rows = [];
+
+      trees.forEach((tree) => {
+        const sortedClaims = [...(tree.claims || [])].sort((a, b) => {
+          return roleRank(a.role) - roleRank(b.role) || a.order_no - b.order_no || a.icn - b.icn;
+        });
+
+        (tree.collaterals || []).forEach((collateral) => {
+          const collateralClaimAllocations = [...(collateral.claim_allocations || [])]
+            .map((item) => {
+              const matchedClaim = sortedClaims.find((claim) => Number(claim.icn) === Number(item.icn));
+              return {
+                icn: item.icn,
+                allocatedAmount: Number(item.allocated_amount || 0),
+                role: matchedClaim ? matchedClaim.role : "junior",
+                orderNo: matchedClaim ? matchedClaim.order_no : 9999
+              };
+            })
+            .sort((a, b) => {
+              return roleRank(a.role) - roleRank(b.role) || a.orderNo - b.orderNo || a.icn - b.icn;
+            });
+
+          let runningAllocated = 0;
+          collateralClaimAllocations.forEach((item) => {
+            runningAllocated += item.allocatedAmount;
+            rows.push({
+              mtn: collateral.mtn,
+              collateralType: collateral.mrtg_kcd_name,
+              finalReviewAmount: Number(collateral.final_review_amount || 0),
+              remainingAfterClaimAllocation: Math.max(0, Number(collateral.final_review_amount || 0) - runningAllocated),
+              stupNo: tree.stup_no,
+              stupYmd: tree.setting.stup_ymd,
+              stupOrd: collateral.stup_ord ?? 9999,
+              settingAvailableAmount: Number(tree.setting.setting_available_amount || 0),
+              accountIcn: item.icn,
+              accountRole: item.role,
+              accountAllocatedAmount: item.allocatedAmount,
+              highlightRole: item.role,
+              linkedIcns: String(item.icn)
+            });
+          });
+        });
+      });
+
+      return rows.sort((a, b) => {
+        return roleRank(a.highlightRole) - roleRank(b.highlightRole) ||
+          a.mtn - b.mtn ||
+          a.stupOrd - b.stupOrd ||
+          a.stupYmd - b.stupYmd ||
+          a.stupNo - b.stupNo ||
+          a.accountIcn - b.accountIcn;
+      });
+    }
+
+    function renderSettingTable(trees) {
+      const rows = buildSettingRows(trees);
+      if (!rows.length) {
+        settingTableWrap.innerHTML = '<div class="empty">연결된 설정 및 담보가 없습니다.</div>';
+        return;
+      }
+
+      let previousMtn = null;
+      let previousSettingKey = null;
+
+      const htmlRows = rows.map((row) => {
+        const settingKey = `${row.mtn}-${row.stupNo}`;
+        const sameMtn = previousMtn === row.mtn;
+        const sameSetting = previousSettingKey === settingKey;
+        previousMtn = row.mtn;
+        previousSettingKey = settingKey;
+
+        return `
+          <tr data-highlight-role="${row.highlightRole}" data-linked-icns="${row.linkedIcns}">
+            <td class="${sameMtn ? "repeat-mtn" : ""}">${row.mtn}</td>
+            <td class="${sameMtn ? "repeat-mtn" : ""}">${row.collateralType || "-"}</td>
+            <td class="${sameMtn ? "repeat-mtn" : ""}">${formatMoney(row.finalReviewAmount)}</td>
+            <td>${formatMoney(row.remainingAfterClaimAllocation)}</td>
+            <td class="${sameSetting ? "repeat-setting" : ""}">${row.stupNo}</td>
+            <td class="${sameSetting ? "repeat-setting" : ""}">${formatDate(row.stupYmd)}</td>
+            <td class="${sameSetting ? "repeat-setting" : ""}">${row.stupOrd === 9999 ? "-" : row.stupOrd}</td>
+            <td class="${sameSetting ? "repeat-setting" : ""}">${formatMoney(row.settingAvailableAmount)}</td>
+            <td>${row.accountIcn} ${roleBadge(row.accountRole)}</td>
+            <td>${formatMoney(row.accountAllocatedAmount)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      settingTableWrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>담보번호</th>
+              <th>담보종류</th>
+              <th>담보 최종심사가액</th>
+              <th>배정 후 담보 잔여액</th>
+              <th>설정번호</th>
+              <th>설정일자</th>
+              <th>설정순위</th>
+              <th>설정 배분가능액</th>
+              <th>연결 계좌번호</th>
+              <th>계좌 배정액</th>
+            </tr>
+          </thead>
+          <tbody>${htmlRows}</tbody>
+        </table>
+      `;
+    }
+
+    function buildClaimRows(trees) {
+      const rows = [];
+
+      trees.forEach((tree) => {
+        (tree.claims || []).forEach((claim) => {
+          const allocations = (claim.collateral_allocations && claim.collateral_allocations.length)
+            ? claim.collateral_allocations
+            : [{ mtn: "-", allocated_amount: claim.allocated_amount, stup_ord: null }];
+
+          allocations.forEach((allocation, index) => {
+            rows.push({
+              icn: claim.icn,
+              role: claim.role,
+              stupNo: tree.stup_no,
+              stupYmd: tree.setting.stup_ymd,
+              orderNo: claim.order_no,
+              rgsnYmd: claim.rgsn_ymd,
+              arrAmt: Number(claim.arr_amt || 0),
+              allocatedAmount: Number(claim.allocated_amount || 0),
+              sunCreditAmount: Number(claim.sun_credit_amount || 0),
+              collateralMtn: allocation.mtn,
+              collateralAllocatedAmount: Number(allocation.allocated_amount || 0),
+              collateralOrder: allocation.stup_ord ?? 9999,
+              allocationRowIndex: index
+            });
+          });
+        });
+      });
+
+      return rows.sort((a, b) => {
+        return roleRank(a.role) - roleRank(b.role) ||
+          a.icn - b.icn ||
+          a.stupYmd - b.stupYmd ||
+          a.orderNo - b.orderNo ||
+          a.collateralOrder - b.collateralOrder ||
+          a.collateralMtn - b.collateralMtn ||
+          a.allocationRowIndex - b.allocationRowIndex;
+      });
+    }
+
+    function renderClaimTable(trees) {
+      const rows = buildClaimRows(trees);
+      if (!rows.length) {
+        claimTableWrap.innerHTML = '<div class="empty">연결된 피담보채권이 없습니다.</div>';
+        return;
+      }
+
+      let previousIcn = null;
+      const htmlRows = rows.map((row) => {
+        const sameIcn = previousIcn === row.icn;
+        previousIcn = row.icn;
+
+        return `
+          <tr data-highlight-role="${row.role}" data-claim-icn="${row.icn}">
+            <td class="${sameIcn ? "repeat-claim" : ""}">${row.icn}</td>
+            <td>${roleBadge(row.role)}</td>
+            <td>${row.stupNo}</td>
+            <td>${formatDate(row.stupYmd)}</td>
+            <td>${row.orderNo}</td>
+            <td>${row.collateralMtn}</td>
+            <td>${formatMoney(row.collateralAllocatedAmount)}</td>
+            <td>${formatDate(row.rgsnYmd)}</td>
+            <td class="${sameIcn ? "repeat-claim" : ""}">${formatMoney(row.arrAmt)}</td>
+            <td class="${sameIcn ? "repeat-claim" : ""}">${formatMoney(row.allocatedAmount)}</td>
+            <td class="${sameIcn ? "repeat-claim" : ""}">${formatMoney(row.sunCreditAmount)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      claimTableWrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>내부계약번호</th>
+              <th>구분</th>
+              <th>설정번호</th>
+              <th>설정일자</th>
+              <th>배분순서</th>
+              <th>담보번호</th>
+              <th>담보별 배정액</th>
+              <th>연결일자</th>
+              <th>계약금액</th>
+              <th>총 배분액</th>
+              <th>순신용</th>
+            </tr>
+          </thead>
+          <tbody>${htmlRows}</tbody>
+        </table>
+      `;
+    }
+
+    analyzeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const payload = {
+        identifier_type: "account",
+        identifier_value: document.getElementById("identifierValue").value.trim(),
+        question: document.getElementById("question").value.trim() || "선순위 관계 조회"
+      };
+
+      statusBox.textContent = "실제 DB를 조회하고 배분 결과를 정리하는 중입니다...";
+      settingTableWrap.innerHTML = '<div class="empty">조회 중...</div>';
+      claimTableWrap.innerHTML = '<div class="empty">조회 중...</div>';
+      reasonSummary.textContent = "조회 결과를 바탕으로 순신용 발생 원인을 분석하는 중입니다...";
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "API 호출에 실패했습니다.");
+        }
+
+        const analysis = data.analysis;
+        const tree = data.allocation_tree;
+
+        statusBox.textContent = data.message;
+        intentValue.textContent = analysis.intent_label;
+        focusValue.textContent = analysis.analysis_focus.join(", ");
+        formatValue.textContent = analysis.response_format;
+        identifierEcho.textContent = payload.identifier_value;
+        seniorTotal.textContent = formatMoney(tree.target_summary.total_senior_allocated);
+        targetAllocated.textContent = formatMoney(tree.target_summary.total_target_allocated);
+        targetShortfall.textContent = formatMoney(tree.target_summary.total_target_shortfall);
+        reasonSummary.innerHTML = buildReasonSummary(tree, payload.identifier_value);
+
+        renderSettingTable(tree.trees);
+        renderClaimTable(tree.trees);
+        applyHighlight("target");
+      } catch (error) {
+        statusBox.textContent = `오류: ${error.message}`;
+        settingTableWrap.innerHTML = '<div class="empty">조회 중 오류가 발생했습니다.</div>';
+        claimTableWrap.innerHTML = '<div class="empty">조회 중 오류가 발생했습니다.</div>';
+        reasonSummary.textContent = "조회 결과를 바탕으로 순신용 발생 원인을 정리하지 못했습니다.";
+        intentValue.textContent = "-";
+        focusValue.textContent = "-";
+        formatValue.textContent = "-";
+        identifierEcho.textContent = "-";
+        seniorTotal.textContent = "-";
+        targetAllocated.textContent = "-";
+        targetShortfall.textContent = "-";
+      }
+    });
+
+    highlightSeniorBtn.addEventListener("click", () => applyHighlight("senior"));
+    highlightTargetBtn.addEventListener("click", () => applyHighlight("target"));
+    clearHighlightBtn.addEventListener("click", () => applyHighlight("none"));
+
+    reasonSummary.addEventListener("click", (event) => {
+      const link = event.target.closest("[data-evidence-icn]");
+      if (!link) return;
+      event.preventDefault();
+      highlightClaimFlow(link.dataset.evidenceIcn);
+    });
+
+    claimTableWrap.addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-claim-icn]");
+      if (!row) return;
+      highlightClaimFlow(row.dataset.claimIcn);
+    });
+  </script>
+</body>
+</html>

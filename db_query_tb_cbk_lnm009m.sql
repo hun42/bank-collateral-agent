@@ -1,0 +1,7 @@
+SELECT
+    "MTN",
+    "MRTG_KCD",
+    "ETC_SBTC_AMT",
+    "MRAK_RTO"
+FROM public."TB_CBK_LNM009M"
+ORDER BY "MTN";
